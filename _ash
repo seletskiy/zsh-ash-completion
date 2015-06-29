@@ -1,0 +1,108 @@
+#compdef ash
+
+function _ash() {
+    _arguments \
+        '(-h --help)'{-h,--help}'[display help]' \
+        '-v[display version]' \
+        '(-u- --username=)'{-u-,--username=}'[Stash username]' \
+        '(-p- --pass=)'{-p-,--pass=}'[Stash password]' \
+        '-w[ignore whitespaces in review diffs]' \
+        '-e-[editor to use, by default '$EDITOR']' \
+        '--host=[Stash hostname]' \
+        '-l-[limit activities in overview]' \
+        \
+        '1:review:_ash_inbox'
+
+
+    case "${words[2]}" in
+        inbox)
+            _arguments \
+                '-d[show descriptions for PRs]' \
+                '2:who:(reviewer author all)'
+            ;;
+        *)
+            _arguments \
+                '2:action:(review ls approve decline ls-reviews)'
+            ;;
+    esac
+
+    case "${words[3]}" in
+        review)
+            _arguments \
+                '3:filename:_ash_review'
+            ;;
+        ls-reviews)
+            _arguments \
+                '-d[show descriptions for PRs]' \
+                '3:what:(open merged declined)'
+    esac
+}
+
+function _ash_inbox() {
+    zstyle ":completion:${curcontext}:" cache-policy _ash_inbox_caching_policy
+
+    _cache_invalid _ash_inbox
+    if [ $? -eq 1 ]; then
+        if _retrieve_cache _ash_inbox reviews; then
+            compadd $reviews
+            return
+        fi
+    fi
+
+    reviews=(inbox)
+
+    for word in $(ash inbox | awk '{print $1}'); do
+        reviews+=$word
+    done
+
+    compadd $reviews
+    _store_cache _ash_inbox reviews
+}
+
+function _ash_review() {
+    zstyle ":completion:${curcontext}:" cache-policy _ash_review_caching_policy
+
+    _cache_invalid _ash_review
+    if [ $? -eq 1 ]; then
+        if _retrieve_cache _ash_review files; then
+            compadd $files
+            return
+        fi
+    fi
+
+    review="${words[2]}"
+    files=()
+
+    for word in $(ash "$review" ls | awk '{print $2}'); do
+        files+=($word)
+    done
+
+    compadd $files
+    _store_cache _ash_review files
+}
+
+function _ash_inbox_caching_policy() {
+    if [[ ! -a ${1%/*}/_ash_review ]]; then
+        return 1
+    fi
+
+    if [[ ${1%/*}/_ash_review -nt $1 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function _ash_review_caching_policy() {
+    if [[ ! -a ${1%/*}/_ash_inbox ]]; then
+        return 1
+    fi
+
+    if [[ ${1%/*}/_ash_inbox -nt $1 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_ash "${@}"
