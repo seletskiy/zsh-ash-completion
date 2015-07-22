@@ -44,18 +44,21 @@ function _ash_inbox() {
     _cache_invalid _ash_inbox
     if [ $? -eq 1 ]; then
         if _retrieve_cache _ash_inbox reviews; then
-            compadd $reviews
+            _values $reviews
             return
         fi
     fi
 
     reviews=(inbox)
 
-    for word in $(ash inbox | awk '{print $1}'); do
-        reviews+=$word
+    IFS=$'\n'
+    for line in $(ash inbox); do
+        pull_request=$(awk '{print $1}' <<< "$line")
+        description=$(awk '{$1 = ""; print $0}' <<< "$line" | sed -r 's/\[|\]/\\&/g')
+        reviews+=$pull_request"[$description]"
     done
 
-    compadd $reviews
+    _values $reviews
     _store_cache _ash_inbox reviews
 }
 
