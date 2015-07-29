@@ -1,5 +1,5 @@
-zsh ash compltion
-=================
+zsh ash completion
+==================
 
 Autocompletion for [ash](https://github.com/seletskiy/ash) command.
 
